@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#050b12" />
+  <title>Futebol 3D — Arena Prisma</title>
+  <meta name="description" content="Simulador de futebol 3D com física de bola, IA tática e câmera de transmissão." />
+  <link rel="preload" href="./vendor/fonts/rajdhani-700.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="./vendor/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23070f18'/%3E%3Ccircle cx='32' cy='32' r='18' fill='none' stroke='%2355e6ff' stroke-width='3'/%3E%3Cpath d='M32 18l7 5-3 8h-8l-3-8z' fill='%2355e6ff'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./css/style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three.module.js",
+        "three/addons/": "./vendor/addons/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7l4 3-1.5 5h-5L8 10z" fill="currentColor"/><path d="M12 3v4M4.2 9l3.8 1M19.8 9L16 10M7.4 20l2.1-5M16.6 20l-2.1-5" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></symbol>
+    <symbol id="i-whistle" viewBox="0 0 24 24"><path d="M4 12h9l7 5v3H8a4 4 0 0 1-4-4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="8" cy="8" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M14 9.5h5" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="i-boot" viewBox="0 0 24 24"><path d="M3 15l2-7 5 1 3 4 7 1v4H5a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M7 13l2 2M11 14l2 2M15 15l2 2" stroke="currentColor" stroke-width="1.4"/></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v4a4 4 0 0 1-8 0zM8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 12v4M9 20h6M10 16h4v4h-4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M16 9a4 4 0 0 1 0 6M18.5 7a7 7 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M14 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-speed" viewBox="0 0 24 24"><path d="M4 16a8 8 0 1 1 16 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 16l4-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.6" fill="currentColor"/></symbol>
+    <symbol id="i-switch" viewBox="0 0 24 24"><path d="M4 8h11l-3-3M20 16H9l3 3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-pass" viewBox="0 0 24 24"><circle cx="5" cy="17" r="2.2" fill="currentColor"/><path d="M7 16l7-7M13 8h5v5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-shoot" viewBox="0 0 24 24"><circle cx="18" cy="6" r="2.3" fill="currentColor"/><path d="M15.5 8.5L4 20M4 20l1-4 4 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 21V4M6 5h11l-2 4 2 4H6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  </svg>
+
+  <canvas id="scene" aria-label="Campo de futebol 3D"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <section id="menu" class="screen menu">
+    <header class="menu-top">
+      <div class="brand">
+        <span class="brand-mark"><svg><use href="#i-ball" /></svg></span>
+        <span class="brand-copy"><b>ARENA PRISMA</b><i>FOOTBALL ENGINE · 3D</i></span>
+      </div>
+      <div class="menu-meta"><span class="dot"></span> TEMPORADA 2026 <span class="sep">/</span> NOITE</div>
+    </header>
+
+    <aside class="menu-card">
+      <div class="eyebrow"><span class="eyebrow-dot"></span> SIMULADOR DE FUTEBOL · ENGINE 3D</div>
+      <h1>FUTEBOL <span>3D</span></h1>
+      <p class="tagline">Física de bola com efeito Magnus, IA tática em campo e transmissão ao vivo. Escolha os times e entre em campo.</p>
+
+      <div class="team-select" aria-label="Seleção de times">
+        <div class="team-pick" data-side="home">
+          <button class="team-arrow" type="button" data-dir="-1" aria-label="Time anterior da casa">‹</button>
+          <div class="team-chip">
+            <span class="team-crest" id="homeCrest">A</span>
+            <span class="team-copy"><i>CASA</i><b id="homePickName">Aurora FC</b><small id="homePickMeta">OVR 84 · 4-3-3</small></span>
+          </div>
+          <button class="team-arrow" type="button" data-dir="1" aria-label="Próximo time da casa">›</button>
+        </div>
+        <div class="versus"><span>VS</span></div>
+        <div class="team-pick" data-side="away">
+          <button class="team-arrow" type="button" data-dir="-1" aria-label="Time anterior visitante">‹</button>
+          <div class="team-chip">
+            <span class="team-crest" id="awayCrest">R</span>
+            <span class="team-copy"><i>VISITANTE</i><b id="awayPickName">Rubro United</b><small id="awayPickMeta">OVR 82 · 4-4-2</small></span>
+          </div>
+          <button class="team-arrow" type="button" data-dir="1" aria-label="Próximo time visitante">›</button>
+        </div>
+      </div>
+
+      <button id="playBtn" class="btn-primary" type="button" aria-label="Play">
+        <span class="btn-glow"></span>
+        <span class="play-icon"><svg><use href="#i-play" /></svg></span>
+        <span class="play-copy"><b>JOGAR AGORA</b><i>KICK-OFF · 11 VS 11</i></span>
+        <span class="play-arrow">→</span>
+      </button>
+
+      <div class="feature-row">
+        <span><svg><use href="#i-ball" /></svg> FÍSICA REAL</span>
+        <span><svg><use href="#i-flag" /></svg> IA TÁTICA</span>
+        <span><svg><use href="#i-trophy" /></svg> 2 TEMPOS</span>
+      </div>
+    </aside>
+
+    <aside class="how-card">
+      <div class="how-head"><span>COMO JOGAR</span><b>CONTROLES</b></div>
+      <div class="how-row"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><p>Mover o jogador ativo</p></div>
+      <div class="how-row"><kbd>ESPAÇO</kbd><p>Passe rasteiro para o companheiro</p></div>
+      <div class="how-row"><kbd>J</kbd><p>Chute a gol com efeito</p></div>
+      <div class="how-row"><kbd>Q</kbd><p>Trocar de jogador</p></div>
+      <div class="how-row"><kbd>SHIFT</kbd><p>Sprint</p></div>
+      <div class="how-foot"><span class="dot"></span> ARRASTE NO CAMPO PARA AJUSTAR A CÂMERA</div>
+    </aside>
+
+    <footer class="menu-foot">
+      <span>ESTÁDIO PRISMA · 68.000 LUGARES</span>
+      <span class="menu-credit">MOTOR PROPRIETÁRIO · THREE.JS / WEBGL</span>
+    </footer>
+  </section>
+
+  <section id="match" class="screen match hidden">
+    <header class="hud">
+      <div class="scoreboard">
+        <div class="score-team home">
+          <span class="score-crest" id="hudHomeCrest">A</span>
+          <span class="score-name"><i>CASA</i><b id="hudHomeName">Aurora FC</b></span>
+        </div>
+        <div class="score-center">
+          <div class="score-line"><b id="scoreHome">0</b><span>:</span><b id="scoreAway">0</b></div>
+          <div class="score-clock"><span id="halfLabel">1º TEMPO</span><b id="clock">00:00</b></div>
+        </div>
+        <div class="score-team away">
+          <span class="score-name"><i>VISITANTE</i><b id="hudAwayName">Rubro United</b></span>
+          <span class="score-crest" id="hudAwayCrest">R</span>
+        </div>
+      </div>
+      <div class="hud-actions">
+        <button id="soundBtn" class="icon-btn" type="button" aria-label="Som" title="Som (M)"><svg><use id="soundIcon" href="#i-volume" /></svg></button>
+        <button id="replayBtn" class="icon-btn" type="button" aria-label="Replay" title="Replay (R)"><svg><use href="#i-speed" /></svg></button>
+      </div>
+    </header>
+
+    <div class="possession">
+      <div class="possession-bar"><span id="posHome"></span><span id="posAway"></span></div>
+      <div class="possession-copy"><span id="posHomeText">CASA 50%</span><b>POSSE DE BOLA</b><span id="posAwayText">50% VISITANTE</span></div>
+    </div>
+
+    <div id="activePlayerTag" class="active-tag"><span class="pulse"></span><b id="activeName">CAMISA 10</b><i id="activeRole">MEI</i></div>
+
+    <div id="goalOverlay" class="goal-overlay hidden">
+      <div class="goal-word">GOL<span>!</span></div>
+      <div class="goal-copy"><b id="goalTeam">AURORA FC</b><i id="goalScorer">CAMISA 9 · 23'</i></div>
+    </div>
+
+    <div id="replayBadge" class="replay-badge hidden"><span class="rec"></span> REPLAY · CÂMERA LENTA</div>
+    <div id="toast" class="toast"></div>
+
+    <div class="controls-hint desktop-only">
+      <span><kbd>WASD</kbd> MOVER</span>
+      <span><kbd>ESPAÇO</kbd> PASSE</span>
+      <span><kbd>J</kbd> CHUTE</span>
+      <span><kbd>Q</kbd> TROCAR</span>
+      <span><kbd>SHIFT</kbd> SPRINT</span>
+    </div>
+
+    <div id="mobileControls" class="mobile-controls">
+      <div id="joystick" class="joystick"><span id="stick"></span><i>MOVER</i></div>
+      <div class="action-grid">
+        <button id="switchBtn" class="action-btn small" type="button" aria-label="Trocar jogador"><svg><use href="#i-switch" /></svg><span>TROCAR</span></button>
+        <button id="sprintBtn" class="action-btn small" type="button" aria-label="Sprint"><svg><use href="#i-speed" /></svg><span>SPRINT</span></button>
+        <button id="passBtn" class="action-btn" type="button" aria-label="Passe"><svg><use href="#i-pass" /></svg><span>PASSE</span></button>
+        <button id="shootBtn" class="action-btn shoot" type="button" aria-label="Chute"><svg><use href="#i-shoot" /></svg><span>CHUTE</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="results" class="screen results hidden">
+    <div class="result-card">
+      <span class="eyebrow" id="resultEyebrow">APITO FINAL · ESTÁDIO PRISMA</span>
+      <h2 id="resultTitle">Vitória da casa</h2>
+      <div class="result-teams">
+        <div class="result-team"><span class="team-crest" id="resultHomeCrest">A</span><b id="resultHomeName">Aurora FC</b></div>
+        <div class="result-score" id="resultScore">2 — 1</div>
+        <div class="result-team"><span class="team-crest" id="resultAwayCrest">R</span><b id="resultAwayName">Rubro United</b></div>
+      </div>
+      <div class="result-stats">
+        <div><span>POSSE</span><b id="statPossession">52% · 48%</b></div>
+        <div><span>FINALIZAÇÕES</span><b id="statShots">9 · 6</b></div>
+        <div><span>DEFESAS</span><b id="statSaves">3 · 5</b></div>
+      </div>
+      <div class="result-mvp"><span>MELHOR EM CAMPO</span><b id="resultMvp">CAMISA 10 · AURORA</b></div>
+      <button id="nextBtn" class="btn-primary next-btn" type="button">
+        <span class="btn-glow"></span>
+        <span class="play-icon"><svg><use href="#i-play" /></svg></span>
+        <span class="play-copy"><b id="nextLabel">JOGAR NOVAMENTE</b><i id="nextSub">NOVO KICK-OFF</i></span>
+        <span class="play-arrow">→</span>
+      </button>
+      <button id="menuBtn" class="btn-ghost" type="button">TROCAR TIMES</button>
+      <div class="result-foot">ARENA PRISMA · <b>TRANSMISSÃO ENCERRADA</b></div>
+    </div>
+  </section>
+
+  <div id="loading" class="loading">
+    <div class="loading-inner">
+      <span class="loading-ball"><svg><use href="#i-ball" /></svg></span>
+      <b>PREPARANDO O GRAMADO</b>
+      <i>CARREGANDO ESTÁDIO E ELENCOS</i>
+      <span class="loading-bar"><span></span></span>
+    </div>
+  </div>
+
+  <div id="flash" class="flash" aria-hidden="true"></div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
